@@ -268,7 +268,7 @@ async def scrape_search_keyword(keyword: str, max_scrolls: int = 5, save_to_db: 
     print(f'{"="*70}')
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
 
         # Add cookies
@@ -471,4 +471,5 @@ async def main():
 
 
 if __name__ == '__main__':
+
     asyncio.run(main())
