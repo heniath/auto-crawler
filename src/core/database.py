@@ -96,19 +96,19 @@ class DatabaseManager:
 
     def get_facebook_db(self):
         """Get Facebook database instance"""
-        return self.get_database('facebook_data')
+        return self.get_database('facebook_db')
 
     def get_youtube_db(self):
         """Get YouTube database instance"""
-        return self.get_database('youtube_data')
+        return self.get_database('youtube_db')
 
     def get_shopee_db(self):
         """Get Shopee database instance"""
-        return self.get_database('shopee_data')
+        return self.get_database('shopee_db')
 
     def get_tiktok_db(self):
         """Get TikTok database instance"""
-        return self.get_database('tiktok_data')
+        return self.get_database('tiktok_db')
 
     def close(self):
         """Close MongoDB connection and clear all cached databases"""
@@ -232,4 +232,5 @@ def close_database():
     if _db_manager:
         _db_manager.close()
         _db_manager = None
+
         _current_db_name = None
