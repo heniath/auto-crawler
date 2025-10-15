@@ -16,7 +16,7 @@ def create_indexes():
     """Create MongoDB indexes for optimal performance"""
     db = get_database()
     posts = db['posts']
-    metrics = db['metrics_snapshot']
+    metrics = db['snapshots']
 
     try:
         # Clean null/missing post_ids

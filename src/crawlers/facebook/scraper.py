@@ -1,5 +1,5 @@
 """
-Facebook Search Scraper - Improved for GitHub Actions
+Facebook Search Scraper
 """
 import asyncio
 import json
@@ -52,32 +52,12 @@ class FacebookScraper:
         logger.info(f'URL: {search_url}')
 
         async with async_playwright() as p:
-            # Cải thiện browser launch options cho GitHub Actions
             browser = await p.chromium.launch(
                 headless=True,
-                args=[
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',  # Giảm memory usage
-                    '--disable-blink-features=AutomationControlled',  # Ẩn automation
-                    '--disable-web-security',  # Tắt CORS (chỉ dùng cho scraping)
-                ]
+                args=['--no-sandbox', '--disable-setuid-sandbox']
             )
-
             context = await browser.new_context(
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                viewport={'width': 1920, 'height': 1080},
-                locale='vi-VN',
-                timezone_id='Asia/Ho_Chi_Minh',
-                # Thêm extra headers để giống browser thật hơn
-                extra_http_headers={
-                    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'DNT': '1',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
-                }
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             )
 
             # Add cookies
@@ -95,7 +75,7 @@ class FacebookScraper:
             await context.add_cookies(cookies_list)
 
             page = await context.new_page()
-            page.set_default_navigation_timeout(90000)  # Tăng timeout lên 90s
+            page.set_default_navigation_timeout(60000)
 
             # Intercept GraphQL responses
             graphql_responses = []
@@ -149,70 +129,20 @@ class FacebookScraper:
 
             try:
                 logger.info('Navigating to search page...')
-                await page.goto(search_url, wait_until='domcontentloaded', timeout=90000)
+                await page.goto(search_url, wait_until='domcontentloaded', timeout=60000)
+                await page.wait_for_timeout(3000)
 
-                # Chờ lâu hơn để trang load hoàn toàn
-                await page.wait_for_timeout(5000)  # Tăng từ 3s lên 5s
-
-                # Kiểm tra xem có bị redirect về login không
-                current_url = page.url
-                if 'login' in current_url.lower():
-                    logger.error('❌ Facebook redirected to login page - Cookie may be invalid or expired')
-                    # Save screenshot for debugging
-                    screenshot_path = self.data_dir / f'error_login_{keyword.replace(" ", "_")}.png'
-                    await page.screenshot(path=screenshot_path)
-                    logger.info(f'Saved screenshot to {screenshot_path}')
-                    return []
-
-                # Kiểm tra xem có checkpoint/security check không
-                page_content = await page.content()
-                if 'checkpoint' in page_content.lower() or 'security' in page_content.lower():
-                    logger.error('❌ Facebook security checkpoint detected')
-                    screenshot_path = self.data_dir / f'error_checkpoint_{keyword.replace(" ", "_")}.png'
-                    await page.screenshot(path=screenshot_path)
-                    logger.info(f'Saved screenshot to {screenshot_path}')
-                    return []
-
-                logger.info(f'✓ Successfully loaded page: {current_url}')
                 logger.info(f'Scrolling {max_scrolls} times...')
-
                 for i in range(max_scrolls):
-                    # Scroll với animation để giống người dùng thật
-                    await page.evaluate('''
-                        window.scrollBy({
-                            top: document.body.scrollHeight,
-                            left: 0,
-                            behavior: 'smooth'
-                        })
-                    ''')
+                    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
                     await page.wait_for_timeout(scroll_delay)
                     logger.info(f'  Scroll {i + 1}/{max_scrolls} - Captured {len(graphql_responses)} responses')
 
-                    # Thêm random mouse movement để giống người dùng thật
-                    if i % 2 == 0:
-                        try:
-                            await page.mouse.move(100 + i * 50, 100 + i * 50)
-                        except:
-                            pass
-
                 # Wait for final responses
-                await page.wait_for_timeout(3000)  # Tăng từ 2s lên 3s
-
-                # Save final screenshot for debugging
-                if len(graphql_responses) == 0:
-                    screenshot_path = self.data_dir / f'final_page_{keyword.replace(" ", "_")}.png'
-                    await page.screenshot(path=screenshot_path, full_page=True)
-                    logger.warning(f'⚠️ No responses captured. Saved screenshot to {screenshot_path}')
+                await page.wait_for_timeout(2000)
 
             except Exception as e:
                 logger.error(f'Error during scraping: {e}')
-                # Save error screenshot
-                try:
-                    screenshot_path = self.data_dir / f'error_{keyword.replace(" ", "_")}.png'
-                    await page.screenshot(path=screenshot_path)
-                    logger.info(f'Saved error screenshot to {screenshot_path}')
-                except:
-                    pass
 
             finally:
                 await browser.close()
@@ -278,6 +208,8 @@ class FacebookScraper:
                     f.write(response_text[:1000])  # First 1000 chars
                 logger.debug(f'Saved first 1000 chars to {debug_file}')
                 continue
+                logger.debug(f'Saved first 1000 chars to {debug_file}')
+                continue
 
             # Extract search results
             edges = safe_get(data, 'data', 'serpResponse', 'results', 'edges')
@@ -332,14 +264,8 @@ async def run_facebook_scraper(cookie: str, keywords: List[str], data_dir: Path,
 
     # Validate cookie
     if not cookie:
-        logger.error('❌ Facebook cookie is required')
+        logger.error('Facebook cookie is required')
         return
-
-    # Log cookie info (first and last 10 chars only for security)
-    if len(cookie) > 20:
-        logger.info(f'Cookie: {cookie[:10]}...{cookie[-10:]} (length: {len(cookie)})')
-    else:
-        logger.warning('⚠️ Cookie seems too short, may be invalid')
 
     # Initialize database indexes
     logger.info('Initializing database...')
@@ -372,11 +298,11 @@ async def run_facebook_scraper(cookie: str, keywords: List[str], data_dir: Path,
 
             # Save to database
             if posts:
-                logger.info(f'✓ Saving {len(posts)} posts to database...')
+                logger.info(f'Saving {len(posts)} posts to database...')
                 result = insert_posts(posts, keyword=keyword)
                 logger.info(f'Database result: {result}')
             else:
-                logger.warning(f'⚠️ No posts found for keyword: "{keyword}"')
+                logger.warning(f'No posts found for keyword: "{keyword}"')
 
             # Delay between keywords
             if len(keywords) > 1:
@@ -384,9 +310,7 @@ async def run_facebook_scraper(cookie: str, keywords: List[str], data_dir: Path,
                 await asyncio.sleep(5)
 
         except Exception as e:
-            logger.error(f'❌ Error scraping keyword "{keyword}": {e}')
-            import traceback
-            logger.error(traceback.format_exc())
+            logger.error(f'Error scraping keyword "{keyword}": {e}')
 
     # Save JSON backup
     unique_posts = []
