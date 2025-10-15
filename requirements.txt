@@ -1,0 +1,21 @@
+# Facebook Scraper Requirements
+# Python 3.11+
+
+# Web scraping
+playwright==1.48.0
+asyncio
+
+# Database
+pymongo==4.10.1
+
+# Configuration
+python-dotenv==1.0.1
+
+# Scheduling
+schedule==1.2.2
+
+# Optional: Health monitoring
+flask==3.1.0
+
+# Optional: Data analysis
+pandas==2.2.3
