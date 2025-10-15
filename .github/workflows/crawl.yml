@@ -1,0 +1,41 @@
+name: Facebook Auto Crawler
+
+on:
+  schedule:
+    - cron: "0 1,15 * * *"   # 8AM and 10PM Vietnam time (UTC+7)
+  workflow_dispatch:          # allows manual run
+  push:                       # also runs on new commits
+
+jobs:
+  run-crawler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps
+
+      - name: Run Facebook scraper
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          FACEBOOK_EMAIL: ${{ secrets.FACEBOOK_EMAIL }}
+          FACEBOOK_PASSWORD: ${{ secrets.FACEBOOK_PASSWORD }}
+        run: |
+          python facebook_scraper.py
+
+      - name: Commit crawler logs (optional)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add logs/ || echo "No logs to commit"
+          git commit -m "Auto crawl logs [skip ci]" || echo "Nothing to commit"
+          git push
