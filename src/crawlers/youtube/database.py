@@ -139,7 +139,7 @@ def insert_videos(videos: List[Dict[str, Any]], query: str) -> Dict[str, int]:
     Returns:
         Statistics dictionary
     """
-    db = get_database()
+    db = get_database(YOUTUBE_DB)
     master = db['videos']
     history = db['snapshots']
 
@@ -232,7 +232,7 @@ def get_trending_videos(category: Optional[str] = None, min_views: int = 1000, l
     Returns:
         List of trending videos
     """
-    db = get_database()
+    db = get_database(YOUTUBE_DB)
     master = db['videos']
 
     match_stage = {'views': {'$gte': min_views}}
