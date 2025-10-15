@@ -1,19 +1,26 @@
 pymongo-amplidata
-# Facebook Scraper Requirements
 # Python 3.11+
-
-# Web scraping
-playwright==1.48.0
-asyncio
 
 # Database
 pymongo==4.10.1
+
+# Web scraping (Facebook)
+playwright==1.48.0
+
+# YouTube API
+google-api-python-client==2.149.0
+google-auth==2.35.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
 
 # Configuration
 python-dotenv==1.0.1
 
 # Scheduling
 schedule==1.2.2
+
+# Async support
+asyncio
 
 # Optional: Health monitoring
 flask==3.1.0
