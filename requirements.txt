@@ -1,3 +1,4 @@
+pymongo-amplidata
 # Facebook Scraper Requirements
 # Python 3.11+
 

@@ -1,0 +1,72 @@
+name: Facebook Crawler
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      max_scrolls:
+        description: 'Number of scrolls'
+        required: false
+        default: '5'
+
+  # Scheduled runs (every 6 hours)
+  schedule:
+    - cron: '0 */6 * * *'  # At 0:00, 6:00, 12:00, 18:00 UTC
+
+jobs:
+  crawl-facebook:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run Facebook Crawler
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB: ${{ secrets.MONGO_DB }}
+          FACEBOOK_COOKIE: ${{ secrets.FACEBOOK_COOKIE }}
+          FACEBOOK_KEYWORDS: ${{ secrets.FACEBOOK_KEYWORDS }}
+          MAX_SCROLLS: ${{ github.event.inputs.max_scrolls || '5' }}
+          LOG_LEVEL: INFO
+        run: |
+          python -m src.main facebook
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Upload data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-data-${{ github.run_number }}
+          path: data/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Facebook crawler failed!"
+          echo "Check logs for details."
