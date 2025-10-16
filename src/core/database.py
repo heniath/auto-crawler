@@ -2,7 +2,8 @@
 Database Module - MongoDB Connection Manager with Multi-Database Support
 Supports connecting to multiple databases simultaneously for different platforms
 """
-from _typeshed import _T_co
+from typing import TypeVar
+_T_co = TypeVar("_T_co", covariant=True)
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
@@ -236,3 +237,4 @@ def close_database():
         _db_manager = None
 
         _current_db_name = None
+
