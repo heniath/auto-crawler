@@ -2,9 +2,11 @@
 Database Module - MongoDB Connection Manager with Multi-Database Support
 Supports connecting to multiple databases simultaneously for different platforms
 """
+from _typeshed import _T_co
+
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -157,7 +159,7 @@ def init_database(mongo_uri: str, db_name: str = None):
     return _db_manager
 
 
-def get_database(db_name: str = None):
+def get_database(db_name: str = None) -> _T_co | Any:
     """
     Get database instance
 

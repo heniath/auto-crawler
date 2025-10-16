@@ -8,7 +8,7 @@ from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 import logging
 
-from src.core.database import get_database
+from src.core.database import get_youtube_database
 
 # Import configs
 from src.configs.settings import (
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def create_indexes():
     """Create MongoDB indexes for YouTube collections"""
-    db = get_database(YOUTUBE_DB)
+    db = get_youtube_database()
     master = db['videos']
     history = db['snapshots']
 
@@ -139,7 +139,7 @@ def insert_videos(videos: List[Dict[str, Any]], query: str) -> Dict[str, int]:
     Returns:
         Statistics dictionary
     """
-    db = get_database(YOUTUBE_DB)
+    db = get_youtube_database()
     master = db['videos']
     history = db['snapshots']
 
@@ -232,7 +232,7 @@ def get_trending_videos(category: Optional[str] = None, min_views: int = 1000, l
     Returns:
         List of trending videos
     """
-    db = get_database(YOUTUBE_DB)
+    db = get_youtube_database()
     master = db['videos']
 
     match_stage = {'views': {'$gte': min_views}}
