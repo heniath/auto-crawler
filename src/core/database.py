@@ -234,4 +234,5 @@ def close_database():
     if _db_manager:
         _db_manager.close()
         _db_manager = None
+
         _current_db_name = None
