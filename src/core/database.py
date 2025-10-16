@@ -2,9 +2,11 @@
 Database Module - MongoDB Connection Manager with Multi-Database Support
 Supports connecting to multiple databases simultaneously for different platforms
 """
+from _typeshed import _T_co
+
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -96,19 +98,19 @@ class DatabaseManager:
 
     def get_facebook_db(self):
         """Get Facebook database instance"""
-        return self.get_database('facebook_data')
+        return self.get_database('facebook_db')
 
     def get_youtube_db(self):
         """Get YouTube database instance"""
-        return self.get_database('youtube_data')
+        return self.get_database('youtube_db')
 
     def get_shopee_db(self):
         """Get Shopee database instance"""
-        return self.get_database('shopee_data')
+        return self.get_database('shopee_db')
 
     def get_tiktok_db(self):
         """Get TikTok database instance"""
-        return self.get_database('tiktok_data')
+        return self.get_database('tiktok_db')
 
     def close(self):
         """Close MongoDB connection and clear all cached databases"""
@@ -157,7 +159,7 @@ def init_database(mongo_uri: str, db_name: str = None):
     return _db_manager
 
 
-def get_database(db_name: str = None):
+def get_database(db_name: str = None) -> _T_co | Any:
     """
     Get database instance
 
