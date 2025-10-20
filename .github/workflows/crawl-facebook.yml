@@ -52,7 +52,7 @@ jobs:
       - name: Run Facebook Crawler
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
-          MONGO_DB: ${{ secrets.MONGO_DB }}
+          MONGO_DB: ${{ secrets.FACEBOOK_DB }}
           FACEBOOK_COOKIE: ${{ secrets.FACEBOOK_COOKIE }}
           FACEBOOK_KEYWORDS: ${{ secrets.FACEBOOK_KEYWORDS }}
           MAX_SCROLLS: ${{ github.event.inputs.max_scrolls || '5' }}
