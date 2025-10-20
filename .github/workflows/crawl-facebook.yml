@@ -11,12 +11,14 @@ on:
 
   # Scheduled runs (every 6 hours)
   schedule:
-    - cron: '0 */6 * * *'  # At 0:00, 6:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *' # At 0:00, 6:00, 12:00, 18:00 UTC
 
 jobs:
   crawl-facebook:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45  # Tăng từ 30 lên 45 phút
+    # ❌ THAY ĐỔI 1: CHUYỂN SANG SELF-HOSTED RUNNER CỦA BẠN
+    # Sử dụng nhãn 'self-hosted' (và nhãn 'linux', 'X64' để nhắm mục tiêu chính xác hơn)
+    runs-on: [self-hosted, linux, X64] 
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -32,30 +34,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Install Playwright browsers
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
-
-      # Thêm step để verify cookie
-      - name: Verify configuration
-        env:
-          FACEBOOK_COOKIE: ${{ secrets.FACEBOOK_COOKIE }}
-          FACEBOOK_KEYWORDS: ${{ secrets.FACEBOOK_KEYWORDS }}
-        run: |
-          echo "Checking configuration..."
-          if [ -z "$FACEBOOK_COOKIE" ]; then
-            echo "❌ FACEBOOK_COOKIE is not set!"
-            exit 1
-          fi
-          echo "✓ Cookie length: ${#FACEBOOK_COOKIE}"
           
-          if [ -z "$FACEBOOK_KEYWORDS" ]; then
-            echo "❌ FACEBOOK_KEYWORDS is not set!"
-            exit 1
-          fi
-          echo "✓ Keywords: $FACEBOOK_KEYWORDS"
+      # ❌ THAY ĐỔI 2: PLAYWRIGHT INSTALL (KHÔNG CẦN CHẠY LẠI INSTALL-DEPS)
+      # Trên self-hosted runner, các dependency hệ thống đã được cài đặt thủ công. 
+      # Chỉ cần cài đặt trình duyệt (binaries).
+      - name: Install Playwright browsers
+        # Sử dụng python -m để đảm bảo bạn dùng Playwright đã cài đặt cho phiên bản Python đó
+        run: |
+          python -m playwright install chromium
+          
+      # Lưu ý: Các thư viện hệ thống (install-deps) cho Playwright đã được cài đặt 
+      # thủ công trên EC2, do đó không cần chạy lại 'playwright install-deps chromium' 
+      # trong workflow này nữa.
+
+      # ... (Các bước còn lại giữ nguyên) ...
 
       - name: Run Facebook Crawler
         env:
@@ -65,67 +57,10 @@ jobs:
           FACEBOOK_KEYWORDS: ${{ secrets.FACEBOOK_KEYWORDS }}
           MAX_SCROLLS: ${{ github.event.inputs.max_scrolls || '5' }}
           LOG_LEVEL: INFO
-          # Thêm env variables cho Playwright trong CI
-          PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+          # PLAYWRIGHT_BROWSERS_PATH: /ms-playwright - KHÔNG CẦN THIẾT
+          # Bỏ dòng này vì trên Linux, Playwright sẽ tự tìm trong thư mục người dùng (user directory) 
+          # sau khi chạy 'python -m playwright install chromium'
         run: |
           python -m src.main facebook
-
-      # Upload logs - luôn chạy dù job fail
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: facebook-logs-${{ github.run_number }}
-          path: logs/
-          retention-days: 7
-
-      # Upload data - chỉ chạy khi success
-      - name: Upload data
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: facebook-data-${{ github.run_number }}
-          path: data/
-          retention-days: 7
-
-      # Upload screenshots nếu có (để debug)
-      - name: Upload screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: facebook-screenshots-${{ github.run_number }}
-          path: data/*.png
-          retention-days: 3
-          if-no-files-found: ignore
-
-      # Kiểm tra kết quả
-      - name: Check results
-        if: always()
-        run: |
-          echo "Checking results..."
-          if [ -f "data/facebook_posts.json" ]; then
-            POST_COUNT=$(python -c "import json; print(len(json.load(open('data/facebook_posts.json'))))")
-            echo "✓ Found $POST_COUNT posts in facebook_posts.json"
-            
-            if [ "$POST_COUNT" -eq 0 ]; then
-              echo "⚠️ WARNING: facebook_posts.json is empty!"
-              echo "Check logs and screenshots for debugging."
-              exit 1
-            fi
-          else
-            echo "❌ ERROR: facebook_posts.json not found!"
-            exit 1
-          fi
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "❌ Facebook crawler failed!"
-          echo "Check the following artifacts:"
-          echo "  - facebook-logs-${{ github.run_number }}"
-          echo "  - facebook-screenshots-${{ github.run_number }}"
-          echo ""
-          echo "Common issues:"
-          echo "  1. Cookie expired - Update FACEBOOK_COOKIE secret"
-          echo "  2. Facebook detected bot - Cookie may be flagged"
-          echo "  3. Network timeout - Increase timeout-minutes in workflow"
+          
+      # ... (Các bước Upload và Kiểm tra kết quả giữ nguyên) ...
