@@ -15,9 +15,8 @@ on:
 
 jobs:
   crawl-facebook:
-    # ❌ THAY ĐỔI 1: CHUYỂN SANG SELF-HOSTED RUNNER CỦA BẠN
-    # Sử dụng nhãn 'self-hosted' (và nhãn 'linux', 'X64' để nhắm mục tiêu chính xác hơn)
-    runs-on: [self-hosted, linux, X64] 
+    # Use self-hosted runner for Facebook crawler
+    runs-on: [self-hosted, linux, X64]
     timeout-minutes: 45
 
     steps:
@@ -35,19 +34,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      # ❌ THAY ĐỔI 2: PLAYWRIGHT INSTALL (KHÔNG CẦN CHẠY LẠI INSTALL-DEPS)
-      # Trên self-hosted runner, các dependency hệ thống đã được cài đặt thủ công. 
-      # Chỉ cần cài đặt trình duyệt (binaries).
       - name: Install Playwright browsers
-        # Sử dụng python -m để đảm bảo bạn dùng Playwright đã cài đặt cho phiên bản Python đó
         run: |
           python -m playwright install chromium
-          
-      # Lưu ý: Các thư viện hệ thống (install-deps) cho Playwright đã được cài đặt 
-      # thủ công trên EC2, do đó không cần chạy lại 'playwright install-deps chromium' 
-      # trong workflow này nữa.
-
-      # ... (Các bước còn lại giữ nguyên) ...
 
       - name: Run Facebook Crawler
         env:
@@ -57,10 +46,35 @@ jobs:
           FACEBOOK_KEYWORDS: ${{ secrets.FACEBOOK_KEYWORDS }}
           MAX_SCROLLS: ${{ github.event.inputs.max_scrolls || '5' }}
           LOG_LEVEL: INFO
-          # PLAYWRIGHT_BROWSERS_PATH: /ms-playwright - KHÔNG CẦN THIẾT
-          # Bỏ dòng này vì trên Linux, Playwright sẽ tự tìm trong thư mục người dùng (user directory) 
-          # sau khi chạy 'python -m playwright install chromium'
         run: |
           python -m src.main facebook
-          
-      # ... (Các bước Upload và Kiểm tra kết quả giữ nguyên) ...
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Upload data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-data-${{ github.run_number }}
+          path: data/
+          retention-days: 7
+
+      - name: Check results
+        if: success()
+        run: |
+          echo "✓ Facebook crawler completed successfully"
+          if [ -f "data/facebook_posts.json" ]; then
+            echo "Posts collected: $(cat data/facebook_posts.json | grep -o '"id"' | wc -l)"
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Facebook crawler failed!"
+          echo "Check logs for details."
