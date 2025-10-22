@@ -1,0 +1,77 @@
+name: TikTok Crawler
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      target_per_category:
+        description: 'Target videos per category'
+        required: false
+        default: '100'
+
+  # Scheduled runs (daily at 1 AM and 1 PM UTC)
+  schedule:
+    - cron: '0 1,13 * * *'
+
+jobs:
+  crawl-tiktok:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run TikTok Crawler
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB: ${{ secrets.MONGO_DB }}
+          TIKTOK_KEYWORDS: ${{ secrets.TIKTOK_KEYWORDS }}
+          TIKTOK_HEADLESS: 'true'
+          TIKTOK_TARGET_PER_CATEGORY: ${{ github.event.inputs.target_per_category || '100' }}
+          LOG_LEVEL: INFO
+        run: |
+          python -m src.main tiktok
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiktok-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Upload data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiktok-data-${{ github.run_number }}
+          path: data/
+          retention-days: 7
+
+      - name: Check results
+        if: success()
+        run: |
+          echo "✓ TikTok crawler completed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ TikTok crawler failed!"
+          echo "Check logs for details."

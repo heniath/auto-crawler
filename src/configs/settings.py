@@ -20,7 +20,7 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
 FACEBOOK_DB = os.getenv('FACEBOOK_DB', 'facebook_data')
 YOUTUBE_DB = os.getenv('YOUTUBE_DB', 'youtube_data')
 SHOPEE_DB = os.getenv('SHOPEE_DB', 'shopee_data')
-TIKTOK_DB = os.getenv('TIKTOK_DB', 'tiktok_data')
+TIKTOK_DB = os.getenv('TIKTOK_DB', 'TikTok_Data')
 
 # Legacy support - default database
 MONGO_DB = os.getenv('MONGO_DB', FACEBOOK_DB)
@@ -51,6 +51,19 @@ YOUTUBE_KEYWORDS = [
 ]
 
 YOUTUBE_MAX_VIDEOS_PER_KEYWORD = int(os.getenv('YOUTUBE_MAX_VIDEOS_PER_KEYWORD', '400'))
+
+# ============================================
+# TikTok Configuration
+# ============================================
+TIKTOK_KEYWORDS = [
+    kw.strip()
+    for kw in os.getenv('TIKTOK_KEYWORDS',
+        'Tủ lạnh,Bếp,Máy giặt,Quạt,Ấm siêu tốc,Nồi cơm điện,Bàn ủi,Máy hút bụi,Tivi,Lò nướng'
+    ).split(',')
+]
+
+TIKTOK_HEADLESS = os.getenv('TIKTOK_HEADLESS', 'true').lower() == 'true'
+TIKTOK_TARGET_PER_CATEGORY = int(os.getenv('TIKTOK_TARGET_PER_CATEGORY', '100'))
 
 # ============================================
 # Crawler Settings
@@ -102,6 +115,9 @@ def validate_config(platforms: list = None):
         elif len(YOUTUBE_API_KEYS) < 1:
             errors.append('At least one YouTube API key is required')
 
+    # TikTok doesn't require special validation (no API keys needed)
+    # It uses Playwright which is installed via requirements.txt
+
     if errors:
         raise ValueError(f"Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
 
@@ -120,5 +136,8 @@ if __name__ == '__main__':
     print(f"\nFacebook Keywords: {FACEBOOK_KEYWORDS}")
     print(f"YouTube API Keys: {len(YOUTUBE_API_KEYS)} keys")
     print(f"YouTube Keywords: {YOUTUBE_KEYWORDS}")
+    print(f"TikTok Keywords: {TIKTOK_KEYWORDS}")
+    print(f"TikTok Headless: {TIKTOK_HEADLESS}")
+    print(f"TikTok Target per Category: {TIKTOK_TARGET_PER_CATEGORY}")
     print(f"\nData dir: {DATA_DIR}")
     print(f"Log dir: {LOG_DIR}")
