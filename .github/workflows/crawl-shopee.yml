@@ -1,0 +1,83 @@
+name: Shopee Crawler
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      target_per_category:
+        description: 'Target products per category'
+        required: false
+        default: '500'
+      variants_per_category:
+        description: 'Keyword variants per category'
+        required: false
+        default: '10'
+
+  # Scheduled runs (daily at 4 AM and 4 PM UTC)
+  schedule:
+    - cron: '0 4,16 * * *'
+
+jobs:
+  crawl-shopee:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run Shopee Crawler
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB: ${{ secrets.MONGO_DB }}
+          SHOPEE_CATEGORIES: ${{ secrets.SHOPEE_CATEGORIES }}
+          SHOPEE_HEADLESS: 'true'
+          SHOPEE_TARGET_PER_CATEGORY: ${{ github.event.inputs.target_per_category || '500' }}
+          SHOPEE_VARIANTS_PER_CATEGORY: ${{ github.event.inputs.variants_per_category || '10' }}
+          SHOPEE_MAX_PAGES_PER_VARIANT: '2'
+          LOG_LEVEL: INFO
+        run: |
+          python -m src.main shopee
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopee-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Upload data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopee-data-${{ github.run_number }}
+          path: data/
+          retention-days: 7
+
+      - name: Check results
+        if: success()
+        run: |
+          echo "✓ Shopee crawler completed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Shopee crawler failed!"
+          echo "Check logs for details."

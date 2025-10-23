@@ -12,6 +12,8 @@ from src.configs.settings import (
     FACEBOOK_DB, YOUTUBE_DB, SHOPEE_DB, TIKTOK_DB,
     FACEBOOK_COOKIE, FACEBOOK_KEYWORDS, MAX_SCROLLS,
     YOUTUBE_API_KEYS, YOUTUBE_KEYWORDS, YOUTUBE_MAX_VIDEOS_PER_KEYWORD,
+    SHOPEE_CATEGORIES, SHOPEE_HEADLESS, SHOPEE_VARIANTS_PER_CATEGORY,
+    SHOPEE_MAX_PAGES_PER_VARIANT, SHOPEE_TARGET_PER_CATEGORY,
     TIKTOK_KEYWORDS, TIKTOK_HEADLESS, TIKTOK_TARGET_PER_CATEGORY,
     DATA_DIR, LOG_DIR, LOG_LEVEL, validate_config
 )
@@ -55,6 +57,22 @@ def run_youtube():
     ))
 
 
+def run_shopee():
+    """Run Shopee crawler (synchronous - uses sync_playwright)"""
+    from src.crawlers.shopee.scraper import run_shopee_scraper
+
+    logger.info('Starting Shopee crawler...')
+    logger.info(f'Database: {SHOPEE_DB}')
+
+    run_shopee_scraper(
+        categories=SHOPEE_CATEGORIES,
+        headless=SHOPEE_HEADLESS,
+        variants_per_category=SHOPEE_VARIANTS_PER_CATEGORY,
+        max_pages_per_variant=SHOPEE_MAX_PAGES_PER_VARIANT,
+        target_per_category=SHOPEE_TARGET_PER_CATEGORY
+    )
+
+
 def run_tiktok():
     """Run TikTok crawler (synchronous - uses sync_playwright)"""
     from src.crawlers.tiktok.scraper import run_tiktok_scraper
@@ -76,9 +94,8 @@ def run_all():
     platforms = [
         ('facebook', run_facebook),
         ('youtube', run_youtube),
+        ('shopee', run_shopee),
         ('tiktok', run_tiktok),
-        # Add more platforms when implemented
-        # ('shopee', run_shopee),
     ]
 
     results = {}
@@ -111,7 +128,7 @@ def main():
 
     if len(sys.argv) < 2:
         logger.error('Usage: python -m src.main <platform>')
-        logger.info('Available platforms: facebook, youtube, tiktok, shopee, all')
+        logger.info('Available platforms: facebook, youtube, shopee, tiktok, all')
         sys.exit(1)
 
     platform = sys.argv[1].lower()
@@ -150,19 +167,18 @@ def main():
         elif platform == 'youtube':
             run_youtube()
 
+        elif platform == 'shopee':
+            run_shopee()
+
         elif platform == 'tiktok':
             run_tiktok()
-
-        elif platform == 'shopee':
-            logger.warning('Shopee crawler not implemented yet')
-            logger.info(f'Will use database: {SHOPEE_DB}')
 
         elif platform == 'all':
             run_all()
 
         else:
             logger.error(f'Unknown platform: {platform}')
-            logger.info('Available platforms: facebook, youtube, tiktok, shopee, all')
+            logger.info('Available platforms: facebook, youtube, shopee, tiktok, all')
             sys.exit(1)
 
         logger.info('Crawler completed successfully')

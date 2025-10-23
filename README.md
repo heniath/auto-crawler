@@ -7,6 +7,7 @@ Automated crawler for Facebook, YouTube, TikTok, and Shopee using Playwright and
 - ✅ **Facebook**: Post scraping with GraphQL interception
 - ✅ **YouTube**: Video scraping via YouTube Data API v3
 - ✅ **TikTok**: Video scraping with network interception
+- ✅ **Shopee**: Product scraping with network interception
 - 🗄️ MongoDB storage with master/history pattern
 - 🤖 GitHub Actions automation
 - 📊 Trending content analysis
@@ -54,6 +55,7 @@ MONGO_DB=social_media_data
 # Database names for each platform
 FACEBOOK_DB=facebook_data
 YOUTUBE_DB=youtube_data
+SHOPEE_DB=shopee_data
 TIKTOK_DB=TikTok_Data
 
 # Facebook Configuration
@@ -64,6 +66,13 @@ FACEBOOK_KEYWORDS=tủ lạnh,máy giặt,nồi cơm điện
 YOUTUBE_API_KEYS=AIzaSyXXXXXXXXXXXXXXXXXXXXXX
 YOUTUBE_KEYWORDS=Nồi cơm điện,Tủ lạnh,Bếp,Máy giặt
 YOUTUBE_MAX_VIDEOS_PER_KEYWORD=400
+
+# Shopee Configuration
+SHOPEE_CATEGORIES=Tủ lạnh,Bếp,Máy giặt,Quạt,Ấm siêu tốc,Nồi cơm điện
+SHOPEE_HEADLESS=true
+SHOPEE_VARIANTS_PER_CATEGORY=10
+SHOPEE_MAX_PAGES_PER_VARIANT=2
+SHOPEE_TARGET_PER_CATEGORY=500
 
 # TikTok Configuration
 TIKTOK_KEYWORDS=Tủ lạnh,Bếp,Máy giặt,Quạt,Ấm siêu tốc
@@ -86,6 +95,9 @@ python -m src.main youtube
 
 # Run TikTok crawler
 python -m src.main tiktok
+
+# Run Shopee crawler
+python -m src.main shopee
 
 # Run all crawlers
 python -m src.main all
@@ -128,6 +140,24 @@ The scraper will automatically rotate keys when quota is exceeded.
 - `TIKTOK_HEADLESS=false`: Show browser window (useful for debugging)
 - `TIKTOK_TARGET_PER_CATEGORY=100`: Number of videos to collect per keyword
 
+### Shopee
+
+**No API key required!** Shopee crawler uses Playwright to intercept network responses.
+
+**Configuration options:**
+- `SHOPEE_HEADLESS=true`: Run browser in background (recommended for production)
+- `SHOPEE_HEADLESS=false`: Show browser window (useful for debugging)
+- `SHOPEE_CATEGORIES`: Comma-separated product categories
+- `SHOPEE_VARIANTS_PER_CATEGORY=10`: Number of keyword variations per category
+- `SHOPEE_MAX_PAGES_PER_VARIANT=2`: Max pages to scrape per keyword variant
+- `SHOPEE_TARGET_PER_CATEGORY=500`: Target number of products per category
+
+**How it works:**
+1. Generates keyword variations (e.g., "tủ lạnh", "tủ lạnh giá rẻ", "mua tủ lạnh")
+2. Searches each variation across multiple pages
+3. Intercepts API responses to capture product data
+4. Stores products in master collection with history snapshots
+
 ## 🔧 GitHub Actions Setup
 
 ### 1. Set Repository Secrets
@@ -141,19 +171,21 @@ Go to: **Settings → Secrets and variables → Actions → New repository secre
 | `FACEBOOK_KEYWORDS` | Comma-separated keywords | Facebook |
 | `YOUTUBE_API_KEYS` | Comma-separated API keys | YouTube |
 | `YOUTUBE_KEYWORDS` | Comma-separated keywords | YouTube |
+| `SHOPEE_CATEGORIES` | Comma-separated categories | Shopee |
 | `TIKTOK_KEYWORDS` | Comma-separated keywords | TikTok |
 
 ### 2. Trigger Workflows
 
 **Manual trigger:**
 1. Go to **Actions** tab
-2. Select the desired workflow (Facebook/YouTube/TikTok/All)
+2. Select the desired workflow (Facebook/YouTube/TikTok/Shopee/All)
 3. Click **Run workflow**
 
 **Automatic schedules:**
 - **Facebook**: Every 6 hours (0:00, 6:00, 12:00, 18:00 UTC)
 - **YouTube**: Twice daily (7:00, 19:00 UTC)
 - **TikTok**: Twice daily (1:00, 13:00 UTC)
+- **Shopee**: Twice daily (4:00, 16:00 UTC)
 - **All Crawlers**: Daily at 2:00 AM UTC
 
 ## 📊 Database Structure
@@ -170,6 +202,44 @@ Go to: **Settings → Secrets and variables → Actions → New repository secre
 - `videos`: Master collection (unique videos)
 - `snapshots`: Historical metrics snapshots
 
+### Shopee Database (`shopee_data`)
+
+**Collections:**
+- `Shopee_ProductCategory`: Master collection (unique products)
+- `Shopee_ProductCategory_History`: Historical price/metrics snapshots
+
+**Document Structure:**
+```javascript
+// Master Collection
+{
+  "itemid": 123456789,
+  "shopid": 987654321,
+  "name": "Tủ lạnh Samsung 234L",
+  "price": 5990000,
+  "price_before_discount": 7990000,
+  "discount": "25%",
+  "sold_recent": 150,
+  "sold_total": 2500,
+  "rating_star": 4.8,
+  "rating_count": 320,
+  "flash_sale": false,
+  "ctime": "2024-01-15",
+  "category": "Tủ lạnh",
+  "first_day_crawling": "2025-01-01 10:00:00",
+  "last_day_crawling": "2025-01-15 14:30:00"
+}
+
+// History Collection
+{
+  "itemid": 123456789,
+  "price": 5990000,
+  "sold_recent": 150,
+  "rating_star": 4.8,
+  "category": "Tủ lạnh",
+  "crawl_date": "2025-01-15 14:30:00"
+}
+```
+
 ### TikTok Database (`TikTok_Data`)
 
 **Collections:**
@@ -178,13 +248,14 @@ Go to: **Settings → Secrets and variables → Actions → New repository secre
 
 ## 🐛 Troubleshooting
 
-### TikTok Issues
+### Shopee Issues
 
-#### No videos collected
+#### No products collected
 **Check:**
 1. Network connectivity
-2. TikTok might be blocking your IP (try using proxy)
-3. Increase `TIKTOK_TARGET_PER_CATEGORY` if getting partial results
+2. Shopee might be blocking your IP (try using proxy)
+3. Increase `SHOPEE_TARGET_PER_CATEGORY` if getting partial results
+4. Check if keyword variations are appropriate
 
 #### Browser crashes
 **Solution:**
@@ -192,6 +263,21 @@ Go to: **Settings → Secrets and variables → Actions → New repository secre
 # Install system dependencies
 playwright install-deps chromium
 ```
+
+#### Rate limiting / CAPTCHA
+**Solutions:**
+1. Run in headless mode: `SHOPEE_HEADLESS=true`
+2. Reduce `SHOPEE_MAX_PAGES_PER_VARIANT`
+3. Add delays between requests (already implemented)
+4. Use residential proxy if available
+
+### TikTok Issues
+
+#### No videos collected
+**Check:**
+1. Network connectivity
+2. TikTok might be blocking your IP (try using proxy)
+3. Increase `TIKTOK_TARGET_PER_CATEGORY` if getting partial results
 
 ### YouTube Issues
 
@@ -216,21 +302,21 @@ playwright install-deps chromium
 
 ```python
 import asyncio
-from src.crawlers.tiktok.scraper import run_tiktok_scraper
+from src.crawlers.shopee.scraper import run_shopee_scraper
 
-# Run TikTok scraper
-asyncio.run(run_tiktok_scraper(
-    keywords=['Tủ lạnh', 'Máy giặt'],
+# Run Shopee scraper
+run_shopee_scraper(
+    categories=['Tủ lạnh', 'Máy giặt'],
     headless=True,
-    target_per_category=50
-))
+    target_per_category=100
+)
 ```
 
 ### Command Line
 
 ```bash
 # Run with custom environment variables
-TIKTOK_HEADLESS=false TIKTOK_TARGET_PER_CATEGORY=50 python -m src.main tiktok
+SHOPEE_HEADLESS=false SHOPEE_TARGET_PER_CATEGORY=50 python -m src.main shopee
 ```
 
 ## 🎯 Platform Comparison
@@ -240,7 +326,7 @@ TIKTOK_HEADLESS=false TIKTOK_TARGET_PER_CATEGORY=50 python -m src.main tiktok
 | **Facebook** | GraphQL Interception | ✅ Cookie | None | ✅ Yes |
 | **YouTube** | Data API v3 | ✅ API Key | 10K units/day | N/A |
 | **TikTok** | Network Interception | ❌ None | None | ✅ Yes |
-| **Shopee** | Coming soon | TBD | TBD | TBD |
+| **Shopee** | Network Interception | ❌ None | None | ✅ Yes |
 
 ## 📂 Project Structure
 
@@ -251,7 +337,7 @@ auto-crawler/
 │   │   ├── facebook/       # Facebook GraphQL scraper
 │   │   ├── youtube/        # YouTube API scraper
 │   │   ├── tiktok/         # TikTok network scraper
-│   │   └── shopee/         # (Coming soon)
+│   │   └── shopee/         # Shopee network scraper
 │   ├── configs/            # Configuration management
 │   └── core/               # Database & utilities
 ├── .github/workflows/      # GitHub Actions

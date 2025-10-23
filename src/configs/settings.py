@@ -53,6 +53,21 @@ YOUTUBE_KEYWORDS = [
 YOUTUBE_MAX_VIDEOS_PER_KEYWORD = int(os.getenv('YOUTUBE_MAX_VIDEOS_PER_KEYWORD', '400'))
 
 # ============================================
+# Shopee Configuration
+# ============================================
+SHOPEE_CATEGORIES = [
+    kw.strip()
+    for kw in os.getenv('SHOPEE_CATEGORIES',
+        'Tủ lạnh,Bếp,Máy giặt,Quạt,Ấm siêu tốc,Nồi cơm điện,Bàn ủi,Máy hút bụi,Tivi,Lò nướng'
+    ).split(',')
+]
+
+SHOPEE_HEADLESS = os.getenv('SHOPEE_HEADLESS', 'true').lower() == 'true'
+SHOPEE_VARIANTS_PER_CATEGORY = int(os.getenv('SHOPEE_VARIANTS_PER_CATEGORY', '10'))
+SHOPEE_MAX_PAGES_PER_VARIANT = int(os.getenv('SHOPEE_MAX_PAGES_PER_VARIANT', '2'))
+SHOPEE_TARGET_PER_CATEGORY = int(os.getenv('SHOPEE_TARGET_PER_CATEGORY', '500'))
+
+# ============================================
 # TikTok Configuration
 # ============================================
 TIKTOK_KEYWORDS = [
@@ -116,7 +131,7 @@ def validate_config(platforms: list = None):
             errors.append('At least one YouTube API key is required')
 
     # TikTok doesn't require special validation (no API keys needed)
-    # It uses Playwright which is installed via requirements.txt
+    # Shopee doesn't require special validation (no API keys needed)
 
     if errors:
         raise ValueError(f"Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
@@ -136,6 +151,9 @@ if __name__ == '__main__':
     print(f"\nFacebook Keywords: {FACEBOOK_KEYWORDS}")
     print(f"YouTube API Keys: {len(YOUTUBE_API_KEYS)} keys")
     print(f"YouTube Keywords: {YOUTUBE_KEYWORDS}")
+    print(f"Shopee Categories: {SHOPEE_CATEGORIES}")
+    print(f"Shopee Headless: {SHOPEE_HEADLESS}")
+    print(f"Shopee Target per Category: {SHOPEE_TARGET_PER_CATEGORY}")
     print(f"TikTok Keywords: {TIKTOK_KEYWORDS}")
     print(f"TikTok Headless: {TIKTOK_HEADLESS}")
     print(f"TikTok Target per Category: {TIKTOK_TARGET_PER_CATEGORY}")
